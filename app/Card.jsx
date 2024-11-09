@@ -9,6 +9,11 @@ import styles from "./card.module.css";
 import { Eye, EyeClosed } from "lucide-react";
 
 const arrowHead = (latlng1, latlng2) => {
+  if (!latlng1 || !latlng2 || latlng1.length < 2 || latlng2.length < 2) {
+    console.error(latlng1, latlng2);
+    return null;
+  }
+
   const angle = Math.atan2(latlng2[1] - latlng1[1], latlng2[0] - latlng1[0]);
   const headLength = 0.00005;
   return [
@@ -35,9 +40,10 @@ const Card = () => {
   const [position, setPosition] = useState([55.7558, 37.6173]);
   const [fileName, setFileName] = useState("");
   const mapRef = useRef(null);
-  const [addYear, setAddYear] = useState('');
+  const [addYear, setAddYear] = useState("");
   const [children, setChildren] = useState(0);
   const [adultsWithCar, setAdultsWithCar] = useState(0);
+  const [adultsWithoutCarsharing, setAdultsWithoutCarsharing] = useState(0);
   const [adultsWithoutCar, setAdultsWithoutCar] = useState(0);
   const [pensioners, setPensioners] = useState(0);
 
@@ -66,7 +72,50 @@ const Card = () => {
     }
   };
 
-  
+  const paramSubmit = async (event) => {
+    event.preventDefault();
+    const data = {
+      user_id: token,
+      year: addYear,
+      parameters: {
+        children_percentage: children,
+        retiree_percentage: pensioners,
+        adult_personal_transport_percentage: adultsWithCar,
+        adult_public_transport_percentage: adultsWithoutCar,
+        adult_other_percentage: adultsWithoutCarsharing,
+      },
+    };
+
+    try {
+      const response = await fetch(
+        "https://marlin-darling-pipefish.ngrok-free.app/api/v1/graph/regenerate",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+      console.log(response);
+
+      setLocations((prevLocations) => {
+        const filteredLocations = prevLocations.filter((location) => {
+          return !location.connections.some((conn) => conn.year === responseData.year);
+        });
+
+        return [...filteredLocations, ...responseData.nodes];
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   useEffect(() => {
     const existingToken = Cookies.get("userToken");
@@ -98,7 +147,7 @@ const Card = () => {
       );
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
+        throw new Error(`${response.statusText}`);
       }
 
       const data = await response.json();
@@ -113,8 +162,6 @@ const Card = () => {
       console.log(data.position);
       if (mapRef.current) {
         mapRef.current.flyTo(data.position, 18);
-      } else {
-        console.error("Map reference is not set.");
       }
     } catch (error) {
       console.error(error);
@@ -141,19 +188,19 @@ const Card = () => {
         }
       );
 
-      const data = await response.json();
-      console.log("Ответ от сервера:", data);
+      const responseData = await response.json();
+      console.log(data);
 
       setYears((prevYears) => {
-        if (!prevYears.includes(data.year)) {
-          return [...prevYears, data.year];
+        if (!prevYears.includes(responseData.year)) {
+          return [...prevYears, responseData.year];
         }
         return prevYears;
       });
 
-      setLocations((prevLocations) => [...prevLocations, ...data.nodes]);
+      setLocations((prevLocations) => [...prevLocations, ...responseData.nodes]);
     } catch (error) {
-      console.error("Ошибка при отправке данных:", error);
+      console.error(error);
     }
   };
   const showAllYears = () => {
@@ -187,11 +234,11 @@ const Card = () => {
     <div style={{ width: "100%", display: "flex" }}>
       <div style={{ width: "25%" }}>
         <div className={styles.container}>
-          <h2 className={styles.title}>Загрузите новые данные</h2>
           <form onSubmit={handleSubmit} className={styles.form}>
+            <h3 className={styles.title}>Загрузите новый граф</h3>
             <div className={styles.formGroup}>
               <label>
-                Время года:
+                Укажите год
                 <input
                   type="text"
                   value={year}
@@ -253,73 +300,85 @@ const Card = () => {
                 className={`${styles.yearButton} ${
                   selectedYear == null ? styles.active : ""
                 }`}
+                style={{ marginRight: "38px" }}
               >
-                Показать все годы
+                Данные за все годы
               </button>
             </div>
           </div>
         </div>
-        <div style={{ padding: '20px' }}>
-      <h2>Введите данные</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>
-            Год:
-            <input
-              type="number"
-              value={addYear}
-              onChange={(e) => setAddYear(e.target.value)}
-              required
-            />
-          </label>
+        <div style={{ padding: "20px" }}>
+          <h2>Уточнить граф</h2>
+          <form onSubmit={paramSubmit}>
+            <div>
+              <label>
+                Год:
+                <input
+                  type="number"
+                  value={addYear}
+                  onChange={(e) => setAddYear(e.target.value)}
+                  required
+                />
+              </label>
+            </div>
+            <div>
+              <label>
+                Дети:
+                <input
+                  type="number"
+                  value={children}
+                  onChange={(e) => setChildren(e.target.value)}
+                  required
+                />
+              </label>
+            </div>
+            <div>
+              <label>
+                Взрослые на машине:
+                <input
+                  type="number"
+                  value={adultsWithCar}
+                  onChange={(e) => setAdultsWithCar(e.target.value)}
+                  required
+                />
+              </label>
+            </div>
+            <div>
+              <label>
+                Взрослые на ОТ:
+                <input
+                  type="number"
+                  value={adultsWithoutCar}
+                  onChange={(e) => setAdultsWithoutCar(e.target.value)}
+                  required
+                />
+              </label>
+            </div>
+            <div>
+              <label>
+                Взрослые на каршеринге:
+                <input
+                  type="number"
+                  value={adultsWithoutCarsharing}
+                  onChange={(e) => setAdultsWithoutCarsharing(e.target.value)}
+                  required
+                />
+              </label>
+            </div>
+            <div>
+              <label>
+                Пенсионеры:
+                <input
+                  type="number"
+                  value={pensioners}
+                  onChange={(e) => setPensioners(e.target.value)}
+                  required
+                />
+              </label>
+            </div>
+            <button type="submit">Отправить</button>
+          </form>
         </div>
-        <div>
-          <label>
-            Дети:
-            <input
-              type="number"
-              value={children}
-              onChange={(e) => setChildren(e.target.value)}
-              required
-            />
-          </label>
-        </div>
-        <div>
-          <label>
-            Взрослые на машине:
-            <input
-              type="number"
-              value={adultsWithCar}
-              onChange={(e) => setAdultsWithCar(e.target.value)}
-              required
-            />
-          </label>
-        </div>
-        <div>
-          <label>
-            Взрослые без машины:
-            <input
-              type="number"
-              value={adultsWithoutCar}
-              onChange={(e) => setAdultsWithoutCar(e.target.value)}
-              required
-            />
-          </label>
-        </div>
-        <div>
-          <label>
-            Пенсионеры:
-            <input
-              type="number"
-              value={pensioners}
-              onChange={(e) => setPensioners(e.target.value)}
-              required
-            />
-          </label>
-        </div>
-        <button type="submit">Отправить</button>
-      </form>
-    </div>
       </div>
       <div style={{ width: "50%" }}>
         <div>
@@ -333,59 +392,60 @@ const Card = () => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             />
-            {locations.map((location) =>
-              location.connections.map((connection) => {
-                const isSelectedYear = selectedYear === connection.year;
-                const isHidden = hiddenYears.has(connection.year);
-                if ((!selectedYear || isSelectedYear) && !isHidden) {
-                  const connectedLocation = locations.find(
-                    (loc) => loc.id === connection.id
-                  );
-                  const points = arrowHead(
-                    location.position,
-                    connectedLocation.position
-                  );
+            {locations &&
+              locations.map((location) =>
+                location.connections.map((connection) => {
+                  const isSelectedYear = selectedYear === connection.year;
+                  const isHidden = hiddenYears.has(connection.year);
+                  if ((!selectedYear || isSelectedYear) && !isHidden) {
+                    const connectedLocation = locations?.find(
+                      (loc) => loc.id === connection.id
+                    );
+                    const points = arrowHead(
+                      location?.position,
+                      connectedLocation?.position
+                    );
 
-                  return (
-                    <React.Fragment key={`${location.id}-${connection.id}`}>
-                      <Polyline
-                        positions={[
-                          location.position,
-                          connectedLocation.position,
-                        ]}
-                        pathOptions={{
-                          weight: connection.width,
-                          color: isSelectedYear
-                            ? "blue"
-                            : getColorAndOpacity(connection.year).color,
-                          opacity: isSelectedYear
-                            ? 1
-                            : getColorAndOpacity(connection.year).opacity,
-                        }}
-                      >
-                        <Popup>
-                          {`От: ${location.name} \nКуда: ${connectedLocation.name}`}
-                        </Popup>
-                      </Polyline>
+                    return (
+                      <React.Fragment key={`${location?.id}-${connection?.id}`}>
+                        <Polyline
+                          positions={[
+                            location?.position,
+                            connectedLocation?.position,
+                          ]}
+                          pathOptions={{
+                            weight: connection?.width,
+                            color: isSelectedYear
+                              ? "blue"
+                              : getColorAndOpacity(connection.year).color,
+                            opacity: isSelectedYear
+                              ? 1
+                              : getColorAndOpacity(connection.year).opacity,
+                          }}
+                        >
+                          <Popup>
+                            {`От: ${location.name} \nКуда: ${connectedLocation.name}`}
+                          </Popup>
+                        </Polyline>
 
-                      <Polyline
-                        positions={points}
-                        pathOptions={{
-                          weight: connection.width,
-                          color: isSelectedYear
-                            ? "blue"
-                            : getColorAndOpacity(connection.year).color,
-                          opacity: isSelectedYear
-                            ? 1
-                            : getColorAndOpacity(connection.year).opacity,
-                        }}
-                      />
-                    </React.Fragment>
-                  );
-                }
-                return null;
-              })
-            )}
+                        <Polyline
+                          positions={points}
+                          pathOptions={{
+                            weight: connection.width,
+                            color: isSelectedYear
+                              ? "blue"
+                              : getColorAndOpacity(connection.year).color,
+                            opacity: isSelectedYear
+                              ? 1
+                              : getColorAndOpacity(connection.year).opacity,
+                          }}
+                        />
+                      </React.Fragment>
+                    );
+                  }
+                  return null;
+                })
+              )}
           </MapContainer>
         </div>
       </div>
