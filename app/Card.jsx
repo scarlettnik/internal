@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Polyline, Popup } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Polyline,
+  Popup,
+  Polygon,
+} from "react-leaflet";
 import { v4 as uuidv4 } from "uuid";
 import Cookies from "js-cookie";
 import "leaflet/dist/leaflet.css";
@@ -46,6 +52,7 @@ const Card = () => {
   const [adultsWithoutCarsharing, setAdultsWithoutCarsharing] = useState(0);
   const [adultsWithoutCar, setAdultsWithoutCar] = useState(0);
   const [pensioners, setPensioners] = useState(0);
+  const [buildings, setBuildings] = useState([]);
 
   const handleYearClick = (year) => {
     setSelectedYear(year === selectedYear ? null : year);
@@ -107,7 +114,9 @@ const Card = () => {
 
       setLocations((prevLocations) => {
         const filteredLocations = prevLocations.filter((location) => {
-          return !location.connections.some((conn) => conn.year === responseData.year);
+          return !location.connections.some(
+            (conn) => conn.year === responseData.year
+          );
         });
 
         return [...filteredLocations, ...responseData.nodes];
@@ -159,6 +168,11 @@ const Card = () => {
 
       setYears(extractedYears);
       setLocations(data.graphs.flatMap((item) => item.nodes));
+      const buildings =
+        data.graphs.length > 0
+          ? data.graphs[data.graphs.length - 1].buildings
+          : [];
+      setBuildings(buildings);
       console.log(data.position);
       if (mapRef.current) {
         mapRef.current.flyTo(data.position, 18);
@@ -189,7 +203,7 @@ const Card = () => {
       );
 
       const responseData = await response.json();
-      console.log(data);
+      console.log(responseData);
 
       setYears((prevYears) => {
         if (!prevYears.includes(responseData.year)) {
@@ -198,7 +212,10 @@ const Card = () => {
         return prevYears;
       });
 
-      setLocations((prevLocations) => [...prevLocations, ...responseData.nodes]);
+      setLocations((prevLocations) => [
+        ...prevLocations,
+        ...responseData.nodes,
+      ]);
     } catch (error) {
       console.error(error);
     }
@@ -207,28 +224,21 @@ const Card = () => {
     setSelectedYear(null);
   };
 
-  const getColorAndOpacity = (year) => {
-    const baseColor = [0, 0, 255];
-    const maxYear = Math.max(...years);
-
-    if (year === maxYear) {
-      return {
-        color: "violet",
-        opacity: 1,
-      };
-    }
-
-    const brightnessFactor = Math.max(0.2, 1 - (maxYear - year) * 0.3);
-    const adjustedColor = baseColor.map((color) =>
-      Math.floor(color * brightnessFactor)
+  const getColorFromLoadPercentageAndYear = (loadPercentage, year) => {
+    const clampedValue = Math.max(0, Math.min(100, loadPercentage));
+    const red = Math.floor((clampedValue / 100) * 255);
+    const green = Math.floor((1 - clampedValue / 100) * 255);
+    const brightnessFactor = Math.max(
+      0,
+      1 - (years[years.length - 1] - year) * 0.3
     );
-    const opacity = Math.max(0.1, 1 - (maxYear - year) * 0.25);
+    const adjustedRed = Math.floor(red * brightnessFactor);
+    const adjustedGreen = Math.floor(green * brightnessFactor);
 
-    return {
-      color: `rgb(${adjustedColor[0]}, ${adjustedColor[1]}, ${adjustedColor[2]})`,
-      opacity: opacity,
-    };
+    return `rgb(${adjustedRed}, ${adjustedGreen}, 0)`;
   };
+
+  console.log(buildings);
 
   return (
     <div style={{ width: "100%", display: "flex" }}>
@@ -414,13 +424,12 @@ const Card = () => {
                             connectedLocation?.position,
                           ]}
                           pathOptions={{
-                            weight: connection?.width,
-                            color: isSelectedYear
-                              ? "blue"
-                              : getColorAndOpacity(connection.year).color,
-                            opacity: isSelectedYear
-                              ? 1
-                              : getColorAndOpacity(connection.year).opacity,
+                            weight: connection.flow * 0.01 + 1,
+                            color: getColorFromLoadPercentageAndYear(
+                              connection.load_percentage,
+                              connection.year
+                            ),
+                            opacity: isSelectedYear ? 1 : 0.4,
                           }}
                         >
                           <Popup>
@@ -432,12 +441,11 @@ const Card = () => {
                           positions={points}
                           pathOptions={{
                             weight: connection.width,
-                            color: isSelectedYear
-                              ? "blue"
-                              : getColorAndOpacity(connection.year).color,
-                            opacity: isSelectedYear
-                              ? 1
-                              : getColorAndOpacity(connection.year).opacity,
+                            color: getColorFromLoadPercentageAndYear(
+                              connection.load_percentage,
+                              connection.year
+                            ),
+                            opacity: isSelectedYear ? 1 : 0.8,
                           }}
                         />
                       </React.Fragment>
@@ -446,6 +454,20 @@ const Card = () => {
                   return null;
                 })
               )}
+            {buildings &&
+              buildings.map((building, index) => (
+                <Polygon
+                  key={index}
+                  positions={building}
+                  pathOptions={{
+                    color: "violet",
+                    fillColor: "violet",
+                    fillOpacity: 0.5,
+                  }}
+                >
+                  <Popup>{`Здание ${index + 1}`}</Popup>
+                </Polygon>
+              ))}
           </MapContainer>
         </div>
       </div>
