@@ -164,6 +164,7 @@ const Card = () => {
   }, []);
 
   const fetchData = async (userId) => {
+    
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_DOMAIN}/api/v1/uploads`,
