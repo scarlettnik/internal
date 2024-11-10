@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 
+
 const Card = dynamic(() => import('./Card'), {
   ssr: false,
 });

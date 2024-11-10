@@ -1,4 +1,4 @@
-/* YourComponent.module.css */
+
 .container {
     display: flex;
     flex-direction: column;
@@ -10,17 +10,28 @@
 
 .title {
     margin-bottom: 20px;
+    margin-top: 15px;
 }
 
 .form {
     background-color: #555555;
-    display: flex;
-    flex-direction: column;
+    display: block;
+    justify-content: space-between;
     align-items: center;
     width: 100%;
-    font-size: 150%;
+    font-size: 120%;
+    border-radius: 20px;
 }
 
+.inputContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.matinput {
+    width: 40%;
+}
 .formGroup {
     width: 100%;
     margin-bottom: 15px;
@@ -28,11 +39,11 @@
 }
 
 .feedback {
-    display: flex;
+    display: block;
     justify-content: center;
     align-items: center;
-    width: 100%;
-    margin: 11px 0 0;
+    width: 80%;
+    margin: 11px auto;
     padding: 8px 20px 7px;
     border-radius: 5px;
     text-align: center;
@@ -51,6 +62,46 @@
     font-size: 120%;
 }
 
+.yearButton {
+    
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 47%; /* Занимает всю ширину */
+}
+
+
+.buttonContainer {
+    display: flex;
+    flex-direction: column; /* Располагаем кнопки в колонку */
+    margin-top: 5px; /* Отступ сверху для кнопок */
+    justify-content: space-between;
+}
+
+.toggleButton {
+    
+    background-color: green; /* Цвет по умолчанию */
+    color: white;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    margin-top: -15px;
+    margin-bottom: 15px;
+    width: 40%; /* Занимает всю ширину */
+    transition: background-color 0.3s ease;
+}
+
+.toggleButton.hidden {
+    background-color: red; /* Цвет для скрытых годов */
+}
+
+.toggleButton:hover {
+    opacity: 0.8; /* Эффект при наведении */
+}
+
 .button {
     padding: 10px 20px;
     background-color: violet;
@@ -62,7 +113,7 @@
 
 .buttonContainer {
     margin-top: 20px;
-    display: flex;
+    display: block;
     flex-direction: column;
     align-items: center;
     width: 100%;
@@ -77,11 +128,56 @@
     border: none;
     cursor: pointer;
     transition: background-color 0.3s;
-    width: 25rem;
+    width: 100%;
     font-size: 150%;
 }
 
 .active {
     background-color: violet;
     color: white;
+}
+
+
+
+
+.h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+}
+
+.label {
+    margin-bottom: 15px;
+    font-weight: bold;
+    color: #555;
+}
+
+.input[type="number"] {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+.input[type="number"]:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+.button {
+    padding: 10px 15px;
+    background-color: violet;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+    margin-top: 10px;
 }
